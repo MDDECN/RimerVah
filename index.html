@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web IDE</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; padding: 30px; }
+        .wrapper { max-width: 900px; margin: auto; }
+        .controls { display: flex; gap: 15px; margin-bottom: 15px; }
+        select, button { padding: 12px 20px; border-radius: 4px; border: none; font-weight: bold; }
+        select { background: #333; color: white; flex-grow: 1; }
+        button { background: #007acc; color: white; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #005a9e; }
+        textarea { 
+            width: 100%; height: 250px; 
+            background: #1e1e1e; color: #ce9178; 
+            font-family: 'Consolas', monospace; padding: 15px;
+            border: 1px solid #333; border-radius: 4px; box-sizing: border-box;
+        }
+        #output { 
+            background: #000; color: #adff2f; 
+            padding: 15px; min-height: 120px; 
+            border-radius: 4px; white-space: pre-wrap; margin-top: 15px;
+            border-left: 4px solid #007acc;
+        }
+        #preview { width: 100%; height: 250px; background: white; margin-top: 15px; border: none; border-radius: 4px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <h2>Multi-Language Code Runner</h2>
+    
+    <div class="controls">
+        <select id="langSelect">
+            <option value="js">JavaScript</option>
+            <option value="py">Python</option>
+            <option value="html">HTML Render</option>
+            <option value="java">Java (Simulator)</option>
+        </select>
+        <button onclick="run()">RUN CODE</button>
+    </div>
+
+    <textarea id="codeInput">console.log("Hello World!");</textarea>
+    
+    <div id="output">Output will appear here...</div>
+    <iframe id="preview"></iframe>
+</div>
+
+<script>
+    const outputDiv = document.getElementById('output');
+    const previewFrame = document.getElementById('preview');
+    const inputArea = document.getElementById('codeInput');
+
+    async function run() {
+        const lang = document.getElementById('langSelect').value;
+        const code = inputArea.value;
+        outputDiv.innerText = "Running...";
+        previewFrame.style.display = "none";
+
+        try {
+            if (lang === 'js') {
+                const originalLog = console.log;
+                console.log = (msg) => { outputDiv.innerText = msg; };
+                eval(code);
+                console.log = originalLog;
+
+            } else if (lang === 'py') {
+                let pyodide = await loadPyodide();
+                let result = await pyodide.runPythonAsync(code);
+                outputDiv.innerText = result || "Success (No output)";
+
+            } else if (lang === 'html') {
+                outputDiv.innerText = "Rendering HTML...";
+                previewFrame.style.display = "block";
+                previewFrame.contentWindow.document.open();
+                previewFrame.contentWindow.document.write(code);
+                previewFrame.contentWindow.document.close();
+
+            } else if (lang === 'java') {
+                const match = code.match(/System\.out\.println\("(.*)"\)/);
+                outputDiv.innerText = "Java Env: Virtual Compilation...\nResult: " + (match ? match[1] : "Compilation Error");
+            }
+        } catch (err) {
+            outputDiv.innerText = "Error: " + err;
+        }
+    }
+</script>
+
+</body>
+</html>
